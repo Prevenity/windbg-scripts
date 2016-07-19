@@ -1,0 +1,58 @@
+$$modified script from "Practical Reverse Engineering"
+$$x86_64 supported
+$$Prevenity, 2016
+
+.catch
+{
+	.if  '${$arg1}' == 'init'
+	{
+	 bp kernelbase!CreateFileA @"$$>a<${$arg0} CreateFileA 0 1";
+	 bp kernelbase!CreateFileW @"$$>a<${$arg0} CreateFileW 1 1";
+	 bp kernelbase!DeleteFileA @"$$>a<${$arg0} DeleteFileA 0 1";
+	 bp kernelbase!DeleteFileW @"$$>a<${$arg0} DeleteFileW 1 1";
+	 bp kernelbase!FindFirstFileA @"$$>a<${$arg0} FindFirstFileA 0 1";
+	 bp kernelbase!FindFirstFileW @"$$>a<${$arg0} FindFirstFileW 1 1";
+ 	 bp kernel32!MoveFileA @"$$>a<${$arg0} MoveFileA 0 1";
+	 bp kernel32!MoveFileW @"$$>a<${$arg0} MoveFileW 1 1";
+	 bp kernelbase!GetFileAttributesA @"$$>a<${$arg0} GetFileAttributesA 0 1";
+	 bp kernelbase!GetFileAttributesExA @"$$>a<${$arg0} GetFileAttributesExA 0 1";
+	 bp kernelbase!GetFileAttributesExW @"$$>a<${$arg0} GetFileAttributesExW 1 1";
+	 bp kernel32!CopyFileA @"$$>a<${$arg0} CopyFileA 0 1";
+	 bp kernel32!CopyFileW @"$$>a<${$arg0} CopyFileW 1 1";
+	 $$ Ignore some debug events (to lessen output pollution)
+	 sxi ld;
+	 $$ Display the list of the newly installed breakpoints
+	 bl;
+	 .leave;
+}
+
+$$ Display API name
+.printf "${$arg1}: >";
+
+$$ Check architecture and store the right argument with filename
+.foreach /pS 2 (token {.effmach}); { aS CurrentArch ${token};};
+
+.if $spat(@"${CurrentArch}", "*x86*") == 1
+{
+	r $t1 = poi(@$csp + 4 * ${$arg3});	
+}
+.else
+{
+	r $t1 = rcx;
+}
+
+
+$$ Is it a unicode string pointer?
+.if ${$arg2} == 1
+{
+	.printf "%mu<\n", @$t1;
+}
+.else
+{
+	$$ Display as ASCII SZ 
+	.printf "%ma<\n", @$t1;
+}
+
+$$ Continue after breakpoint
+gc;
+}
